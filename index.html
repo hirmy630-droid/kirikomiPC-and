@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -99,7 +99,7 @@
 
         .tab-button {
             flex: 1;
-            padding: 4px 0;
+            padding: 3px 0;
             background: transparent;
             color: var(--ios-silver-dark);
             font-size: 15px;
@@ -265,9 +265,9 @@
     <div id="toast">コピーしました</div>
 
     <div class="main-container" id="mainApp">
-        <!-- 最上部ヘッダー行 -->
+        <!-- 最上部ヘッダー行: タイトルを変更 -->
         <div class="app-top-bar">
-            <span class="title">施工割付</span>
+            <span class="title">切込寸法</span>
             <span class="company">KYOWA ROOF</span>
         </div>
 
@@ -799,7 +799,7 @@
         renderHistory();
     }
 
-    // スワイプ操作 (3画面対応)
+    // スワイプ操作
     let touchStartXPoint = 0;
     document.addEventListener('touchstart', e => { touchStartXPoint = e.changedTouches[0].screenX; }, { passive: true });
     document.addEventListener('touchend', e => {
