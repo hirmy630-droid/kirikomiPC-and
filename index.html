@@ -186,7 +186,13 @@
                         <button type="button" onclick="setCalcDir('RtoL')" id="btnRtoL" class="dir-button">左→右</button>
                     </div>
                 </div>
-                <div class="bg-[#111] rounded-2xl border border-[#333] shadow-xl overflow-hidden p-1">
+                <!-- ズーム機能を追加した図面エリア -->
+                <div class="bg-[#111] rounded-2xl border border-[#333] shadow-xl overflow-hidden p-1 relative cursor-pointer" onclick="openZoomModal('svgContainer')">
+                    <!-- 拡大バッジ -->
+                    <div class="absolute top-2 right-2 bg-black/70 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1 backdrop-blur-sm border border-white/20 z-10">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
+                        拡大
+                    </div>
                     <div id="svgContainer" class="w-full bg-[#000] rounded-xl overflow-hidden"></div>
                 </div>
                 <div id="numericResults" class="grid gap-3"></div>
@@ -198,7 +204,13 @@
             <div class="history-view-container">
                 <div class="history-section-content pb-10">
                     <div id="historyPreviewContainer" class="mb-4 hidden px-3">
-                        <div class="bg-[#111] rounded-2xl border border-[#333] shadow-xl overflow-hidden p-1 mb-1">
+                        <!-- ズーム機能を追加した履歴図面エリア -->
+                        <div class="bg-[#111] rounded-2xl border border-[#333] shadow-xl overflow-hidden p-1 mb-1 relative cursor-pointer" onclick="openZoomModal('historyPreviewSvg')">
+                            <!-- 拡大バッジ -->
+                            <div class="absolute top-2 right-2 bg-black/70 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1 backdrop-blur-sm border border-white/20 z-10">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
+                                拡大
+                            </div>
                             <div id="historyPreviewSvg" class="w-full bg-[#000] rounded-xl overflow-hidden"></div>
                         </div>
                     </div>
@@ -236,7 +248,7 @@
         <div class="padding-bottom"></div>
     </div>
 
-    <!-- モーダル -->
+    <!-- 削除確認モーダル -->
     <div id="customConfirmModal" class="hidden fixed inset-0 flex items-center justify-center p-6" style="background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999;">
         <div class="bg-[#1c1c1e] w-full max-w-sm rounded-3xl p-6 border border-[#3a3a3c] text-center shadow-2xl">
             <h4 class="text-[18px] font-bold text-white mb-3">確認</h4>
@@ -244,6 +256,25 @@
             <div class="flex gap-3">
                 <button type="button" onclick="document.getElementById('customConfirmModal').classList.add('hidden')" class="flex-1 bg-[#2c2c2e] text-white font-bold py-3 rounded-xl">キャンセル</button>
                 <button type="button" onclick="executeConfirm()" class="flex-1 bg-[#ff453a] text-white font-bold py-3 rounded-xl">削除する</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 拡大表示用モーダル (新規追加) -->
+    <div id="zoomModal" class="hidden fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 backdrop-blur-md transition-opacity" onclick="closeZoomModal()">
+        <!-- 閉じるボタン -->
+        <button type="button" class="absolute top-6 right-6 text-white bg-white/20 hover:bg-white/30 rounded-full p-2 backdrop-blur-md transition-colors z-[10010]" onclick="closeZoomModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+        <!-- 拡大画像コンテナ -->
+        <div class="w-full max-w-4xl p-2 md:p-6 flex flex-col items-center justify-center h-full" onclick="event.stopPropagation()">
+            <!-- SVGのコピー先 -->
+            <div id="zoomSvgContainer" class="w-full bg-[#000] rounded-2xl border border-white/20 shadow-2xl overflow-hidden cursor-pointer" onclick="closeZoomModal()">
+                <!-- SVGがここに挿入される -->
+            </div>
+            <!-- ヒントテキスト -->
+            <div class="mt-6 text-white/50 text-sm font-medium tracking-widest bg-white/10 px-4 py-1.5 rounded-full pointer-events-none">
+                画面をタップして閉じる
             </div>
         </div>
     </div>
@@ -522,6 +553,29 @@
             const t = document.getElementById('toast');
             if (t) { t.innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1000); }
         }
+
+        // ---------- ズーム機能 (追加) ----------
+        function openZoomModal(sourceId) {
+            const sourceEl = document.getElementById(sourceId);
+            if (!sourceEl || !sourceEl.innerHTML) return;
+            
+            // 対象のSVGコンテンツをコピー
+            const zoomContainer = document.getElementById('zoomSvgContainer');
+            zoomContainer.innerHTML = sourceEl.innerHTML;
+            
+            // モーダルを表示
+            const modal = document.getElementById('zoomModal');
+            modal.classList.remove('hidden');
+        }
+
+        function closeZoomModal() {
+            const modal = document.getElementById('zoomModal');
+            modal.classList.add('hidden');
+            
+            // メモリ解放のため中身をクリア
+            document.getElementById('zoomSvgContainer').innerHTML = '';
+        }
+        // ------------------------------------
 
         let touchStartXPoint = 0;
         document.addEventListener('touchstart', e => { touchStartXPoint = e.changedTouches[0].screenX; }, { passive: true });
