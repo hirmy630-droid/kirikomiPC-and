@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <title>切込寸法計算</title>
     <script src="https://cdn.tailwindcss.com/3.4.1"></script>
     <style>
@@ -84,13 +84,114 @@
         .dir-switch-bar { background-color: #1c1c1e; padding: 2px; border-radius: 8px; display: inline-flex; }
         .dir-button { font-size: 13px; color: #aeaeb2; padding: 6px 12px; border: 2px solid transparent; font-weight: 500; }
         .dir-active { background-color: #3a3a3c; color: var(--theme-color); border: 2px solid var(--theme-color); border-radius: 6px; }
+        .preview-top-spacer { height: 37px; margin-bottom: 4px; }
+        .preview-header-row {
+            height: 37px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .preview-header-row.placeholder {
+            visibility: hidden;
+        }
 
         .padding-bottom { padding-bottom: 40px; }
 
         #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(59, 130, 246, 0.95); color: white; padding: 16px 32px; border-radius: 12px; font-weight: 600; opacity: 0; z-index: 1000; transition: 0.3s; pointer-events: none; }
         #toast.show { opacity: 1; }
         .hidden { display: none !important; }
-    </style>
+    
+/* Android fullscreen install UI */
+#installBtn{
+  position:fixed;
+  right:16px;
+  bottom:calc(16px + env(safe-area-inset-bottom));
+  z-index:9999;
+  border:none;
+  border-radius:14px;
+  background:#2563eb;
+  color:#fff;
+  padding:12px 16px;
+  font-size:14px;
+  font-weight:700;
+  box-shadow:0 10px 24px rgba(0,0,0,.35);
+  display:none;
+}
+#installBtn:active{transform:scale(.98)}
+body{
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+        .calc-split-layout,
+        .history-split-layout {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .split-pane {
+            width: 100%;
+        }
+
+        @media (min-width: 900px) and (orientation: landscape) {
+            .main-container {
+                max-width: 1366px;
+                min-height: 100vh;
+            }
+
+            .app-top-bar {
+                padding-top: calc(env(safe-area-inset-top) + 10px);
+            }
+
+            .calc-split-layout,
+            .history-split-layout {
+                flex-direction: row;
+                align-items: flex-start;
+                gap: 0;
+                padding: 8px 10px 12px;
+            }
+
+            .calc-split-layout .split-pane,
+            .history-split-layout .split-pane {
+                width: 50%;
+            }
+
+            .calc-split-layout .split-pane:first-child,
+            .history-split-layout .split-pane:first-child {
+                border-right: 1px solid var(--ios-border);
+                padding-right: 8px;
+            }
+
+            .calc-split-layout .split-pane:last-child,
+            .history-split-layout .split-pane:last-child {
+                padding-left: 8px;
+            }
+
+            .history-view-container {
+                margin: 0;
+            }
+        }
+
+</style>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="切込">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+}
+</script>
+
 </head>
 <body id="mainBody">
 
@@ -106,130 +207,176 @@
         <!-- タブ -->
         <div class="tab-wrapper">
             <div class="tab-container">
-                <button id="tabSide" class="tab-button active" onclick="switchTab('side')">横 切込</button>
-                <button id="tabHeight" class="tab-button" onclick="switchTab('height')">縦 切込</button>
+                <button id="tabSide" class="tab-button active" onclick="switchTab('side')">切り込み</button>
+                <button id="tabHeight" class="tab-button hidden" onclick="switchTab('height')">縦 切込</button>
                 <button id="tabHistory" class="tab-button" onclick="switchTab('history')">履歴</button>
             </div>
         </div>
         
         <!-- 計算画面 -->
         <div id="viewCalc">
-            <div id="sideInputs">
-                <div class="cell-grid">
-                    <div class="calc-cell" onclick="focusInput('side_a')">
-                        <span class="input-label-left">働き幅 (＠)</span>
-                        <div id="display-side_a" class="input-value">0</div>
+            <div class="calc-split-layout">
+                <div class="split-pane">
+                    <div id="sideInputs">
+                        <div class="cell-grid">
+                            <div class="calc-cell" onclick="focusInput('side_a')">
+                                <span class="input-label-left">働き幅 (＠)</span>
+                                <div id="display-side_a" class="input-value">0</div>
+                            </div>
+                            <div class="calc-cell" onclick="focusInput('side_l2')">
+                                <span class="input-label-left">横幅 (開口部)</span>
+                                <div id="display-side_l2" class="input-value">0</div>
+                            </div>
+                            <div class="calc-cell span-2" onclick="focusInput('side_no')">
+                                <span class="input-label-left text-center">No.</span>
+                                <div id="display-side_no" class="input-value">1</div>
+                            </div>
+                            <div class="calc-cell span-4" onclick="focusInput('side_l1')">
+                                <span class="input-label-left">寸法 (張方向↔︎対象)</span>
+                                <div id="display-side_l1" class="input-value input-value-lg">0</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="calc-cell" onclick="focusInput('side_l2')">
-                        <span class="input-label-left">横幅 (開口部)</span>
-                        <div id="display-side_l2" class="input-value">0</div>
-                    </div>
-                    <div class="calc-cell span-2" onclick="focusInput('side_no')">
-                        <span class="input-label-left text-center">No.</span>
-                        <div id="display-side_no" class="input-value">1</div>
-                    </div>
-                    <div class="calc-cell span-4" onclick="focusInput('side_l1')">
-                        <span class="input-label-left">寸法 (張方向↔︎対象)</span>
-                        <div id="display-side_l1" class="input-value input-value-lg">0</div>
-                    </div>
-                </div>
-            </div>
 
-            <div id="heightInputs" class="hidden">
-                <div class="cell-grid">
-                    <div class="calc-cell" onclick="focusInput('h_total')">
-                        <span class="input-label-left">全長 (L)</span>
-                        <div id="display-h_total" class="input-value">0</div>
-                    </div>
-                    <div class="calc-cell" onclick="focusInput('h_l2')">
-                        <span class="input-label-left">縦幅 (開口部)</span>
-                        <div id="display-h_l2" class="input-value">0</div>
-                    </div>
-                    <div class="calc-cell span-2" onclick="focusInput('h_no')">
-                        <span class="input-label-left text-center">No.</span>
-                        <div id="display-h_no" class="input-value">1</div>
-                    </div>
-                    <div class="calc-cell span-4" onclick="focusInput('h_l1')">
-                        <span class="input-label-left">寸法 (下↑対象)</span>
-                        <div id="display-h_l1" class="input-value input-value-lg">0</div>
-                    </div>
-                </div>
-            </div>
+                    <div id="keypadArea" class="keypad-container keypad-left">
+                        <button class="key-btn" onclick="pressSideKey('7')">7</button>
+                        <button class="key-btn" onclick="pressSideKey('8')">8</button>
+                        <button class="key-btn" onclick="pressSideKey('9')">9</button>
+                        <button class="key-btn gray" onclick="pressSideKey('clear')">C</button>
 
-            <!-- テンキー -->
-            <div id="keypadArea" class="keypad-container">
-                <button class="key-btn" onclick="pressKey('7')">7</button>
-                <button class="key-btn" onclick="pressKey('8')">8</button>
-                <button class="key-btn" onclick="pressKey('9')">9</button>
-                <button class="key-btn gray" onclick="pressKey('clear')">C</button>
-                
-                <button class="key-btn" onclick="pressKey('4')">4</button>
-                <button class="key-btn" onclick="pressKey('5')">5</button>
-                <button class="key-btn" onclick="pressKey('6')">6</button>
-                <button class="key-btn gray" onclick="pressKey('allClear')">AC</button>
-                
-                <button class="key-btn" onclick="pressKey('1')">1</button>
-                <button class="key-btn" onclick="pressKey('2')">2</button>
-                <button class="key-btn" onclick="pressKey('3')">3</button>
-                <button class="key-btn orange row-span-2 h-full text-[18px]" onclick="pressKey('enter')">保存</button>
-                
-                <button class="key-btn" onclick="pressKey('0')">0</button>
-                <button class="key-btn" onclick="pressKey('00')">00</button>
-                <button class="key-btn text-[#0a84ff]" style="font-size: 15px;" onclick="switchTab('history')">履歴</button>
-            </div>
+                        <button class="key-btn" onclick="pressSideKey('4')">4</button>
+                        <button class="key-btn" onclick="pressSideKey('5')">5</button>
+                        <button class="key-btn" onclick="pressSideKey('6')">6</button>
+                        <button class="key-btn gray" onclick="pressSideKey('allClear')">AC</button>
 
-            <!-- 計算結果（図面） -->
-            <div id="resultArea" class="hidden result-area space-y-3 mb-6">
-                <div id="directionToggle" class="flex justify-center mb-1">
-                    <div class="dir-switch-bar gap-1">
-                        <button type="button" onclick="setCalcDir('LtoR')" id="btnLtoR" class="dir-button dir-active">左←右</button>
-                        <button type="button" onclick="setCalcDir('RtoL')" id="btnRtoL" class="dir-button">左→右</button>
+                        <button class="key-btn" onclick="pressSideKey('1')">1</button>
+                        <button class="key-btn" onclick="pressSideKey('2')">2</button>
+                        <button class="key-btn" onclick="pressSideKey('3')">3</button>
+                        <button class="key-btn orange row-span-2 h-full text-[18px]" onclick="pressSideKey('enter')">保存</button>
+
+                        <button class="key-btn" onclick="pressSideKey('0')">0</button>
+                        <button class="key-btn" onclick="pressSideKey('00')">00</button>
+                        <button class="key-btn text-[#0a84ff]" style="font-size: 15px;" onclick="switchTab('history')">履歴</button>
+                    </div>
+
+                    <div id="resultArea" class="hidden result-area space-y-3 mb-6">
+                        <div id="directionToggle" class="preview-header-row">
+                            <div class="dir-switch-bar gap-1">
+                                <button type="button" onclick="setCalcDir('LtoR')" id="btnLtoR" class="dir-button dir-active">左←右</button>
+                                <button type="button" onclick="setCalcDir('RtoL')" id="btnRtoL" class="dir-button">左→右</button>
+                            </div>
+                        </div>
+                        <div class="bg-[#111] rounded-2xl border border-[#333] shadow-xl overflow-hidden p-1 relative cursor-pointer" onclick="openZoomModal('svgContainer')">
+                            <div id="svgContainer" class="w-full bg-[#000] rounded-xl overflow-hidden"></div>
+                        </div>
+                        <div id="numericResults" class="grid gap-3"></div>
                     </div>
                 </div>
-                <!-- ズーム機能を追加した図面エリア -->
-                <div class="bg-[#111] rounded-2xl border border-[#333] shadow-xl overflow-hidden p-1 relative cursor-pointer" onclick="openZoomModal('svgContainer')">
-                    <div id="svgContainer" class="w-full bg-[#000] rounded-xl overflow-hidden"></div>
+
+                <div class="split-pane">
+                    <div id="heightInputs">
+                        <div class="cell-grid">
+                            <div class="calc-cell" onclick="focusInput('h_total')">
+                                <span class="input-label-left">全長 (L)</span>
+                                <div id="display-h_total" class="input-value">0</div>
+                            </div>
+                            <div class="calc-cell" onclick="focusInput('h_l2')">
+                                <span class="input-label-left">縦幅 (開口部)</span>
+                                <div id="display-h_l2" class="input-value">0</div>
+                            </div>
+                            <div class="calc-cell span-2" onclick="focusInput('h_no')">
+                                <span class="input-label-left text-center">No.</span>
+                                <div id="display-h_no" class="input-value">1</div>
+                            </div>
+                            <div class="calc-cell span-4" onclick="focusInput('h_l1')">
+                                <span class="input-label-left">寸法 (下↑対象)</span>
+                                <div id="display-h_l1" class="input-value input-value-lg">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="keypad-container keypad-right">
+                        <button class="key-btn" onclick="pressHeightKey('7')">7</button>
+                        <button class="key-btn" onclick="pressHeightKey('8')">8</button>
+                        <button class="key-btn" onclick="pressHeightKey('9')">9</button>
+                        <button class="key-btn gray" onclick="pressHeightKey('clear')">C</button>
+
+                        <button class="key-btn" onclick="pressHeightKey('4')">4</button>
+                        <button class="key-btn" onclick="pressHeightKey('5')">5</button>
+                        <button class="key-btn" onclick="pressHeightKey('6')">6</button>
+                        <button class="key-btn gray" onclick="pressHeightKey('allClear')">AC</button>
+
+                        <button class="key-btn" onclick="pressHeightKey('1')">1</button>
+                        <button class="key-btn" onclick="pressHeightKey('2')">2</button>
+                        <button class="key-btn" onclick="pressHeightKey('3')">3</button>
+                        <button class="key-btn orange row-span-2 h-full text-[18px]" onclick="pressHeightKey('enter')">保存</button>
+
+                        <button class="key-btn" onclick="pressHeightKey('0')">0</button>
+                        <button class="key-btn" onclick="pressHeightKey('00')">00</button>
+                        <button class="key-btn text-[#0a84ff]" style="font-size: 15px;" onclick="switchTab('history')">履歴</button>
+                    </div>
+
+                    <div id="heightResultArea" class="hidden result-area space-y-3 mb-6">
+                        <div class="preview-header-row placeholder" aria-hidden="true">
+                            <div class="dir-switch-bar gap-1">
+                                <button type="button" class="dir-button">左←右</button>
+                                <button type="button" class="dir-button">左→右</button>
+                            </div>
+                        </div>
+                        <div class="bg-[#111] rounded-2xl border border-[#333] shadow-xl overflow-hidden p-1 relative cursor-pointer" onclick="openZoomModal('heightSvgContainer')">
+                            <div id="heightSvgContainer" class="w-full bg-[#000] rounded-xl overflow-hidden"></div>
+                        </div>
+                        <div id="heightNumericResults" class="grid gap-3"></div>
+                    </div>
                 </div>
-                <div id="numericResults" class="grid gap-3"></div>
             </div>
         </div>
 
         <!-- 履歴画面 -->
         <div id="viewHistory" class="hidden">
-            <div class="history-view-container">
-                <div class="history-section-content pb-10">
-                    <div id="historyPreviewContainer" class="mb-4 hidden px-3">
-                        <!-- ズーム機能を追加した履歴図面エリア -->
-                        <div class="bg-[#111] rounded-2xl border border-[#333] shadow-xl overflow-hidden p-1 mb-1 relative cursor-pointer" onclick="openZoomModal('historyPreviewSvg')">
-                            <div id="historyPreviewSvg" class="w-full bg-[#000] rounded-xl overflow-hidden"></div>
+            <div class="history-split-layout">
+                <div class="split-pane">
+                    <div class="history-view-container">
+                        <div class="history-section-content pb-10">
+                            <div id="sideHistoryPreviewContainer" class="mb-4 hidden px-3">
+                                <div class="bg-[#111] rounded-2xl border border-[#333] shadow-xl overflow-hidden p-1 mb-1 relative cursor-pointer" onclick="openZoomModal('sideHistoryPreviewSvg')">
+                                    <div id="sideHistoryPreviewSvg" class="w-full bg-[#000] rounded-xl overflow-hidden"></div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between mb-6 p-3 bg-[#1c1c1e] mx-3 rounded-xl border border-[#333]">
+                                <h2 class="history-label-main">横 切込履歴</h2>
+                                <button type="button" onclick="openConfirm('category', '横')" class="bg-[#3a3a3c] text-white text-[10px] font-bold px-4 py-1.5 rounded-full shadow-sm">削除</button>
+                            </div>
+
+                            <div class="history-cat-section section-side">
+                                <div id="sideHistoryList" class="space-y-2"></div>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="flex items-center justify-between mb-6 p-3 bg-[#1c1c1e] mx-3 rounded-xl border border-[#333]">
-                        <h2 class="history-label-main">計算履歴</h2>
-                        <div class="flex gap-2 items-center">
-                            <button type="button" onclick="switchTab('side')" class="bg-[#3a3a3c] text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-sm">横計算</button>
-                            <button type="button" onclick="switchTab('height')" class="bg-[#3a3a3c] text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-sm">縦計算</button>
-                            <button type="button" onclick="openConfirm('all')" class="bg-[#ff453a] text-white text-[11px] font-bold px-3 py-1.5 rounded-full uppercase shadow-sm">一括削除</button>
-                        </div>
-                    </div>
-                    
-                    <div class="history-cat-section section-side">
-                        <div class="flex justify-between items-center mb-3 px-1">
-                            <h3 class="history-label-sub label-side">横切込</h3>
-                            <button type="button" onclick="openConfirm('category', '横')" class="bg-[#3a3a3c] text-white text-[10px] font-bold px-4 py-1.5 rounded-full shadow-sm">削除</button>
-                        </div>
-                        <div id="sideHistoryList" class="space-y-2"></div>
-                    </div>
+                <div class="split-pane">
+                    <div class="history-view-container">
+                        <div class="history-section-content pb-10">
+                            <div id="heightHistoryPreviewContainer" class="mb-4 hidden px-3">
+                                <div class="bg-[#111] rounded-2xl border border-[#333] shadow-xl overflow-hidden p-1 mb-1 relative cursor-pointer" onclick="openZoomModal('heightHistoryPreviewSvg')">
+                                    <div id="heightHistoryPreviewSvg" class="w-full bg-[#000] rounded-xl overflow-hidden"></div>
+                                </div>
+                            </div>
 
-                    <div class="border-t border-[#333] my-4 mx-4"></div>
+                            <div class="flex items-center justify-between mb-6 p-3 bg-[#1c1c1e] mx-3 rounded-xl border border-[#333]">
+                                <h2 class="history-label-main">縦 切込履歴</h2>
+                                <div class="flex gap-2 items-center">
+                                    <button type="button" onclick="openConfirm('all')" class="bg-[#ff453a] text-white text-[11px] font-bold px-3 py-1.5 rounded-full uppercase shadow-sm">一括削除</button>
+                                    <button type="button" onclick="openConfirm('category', '縦')" class="bg-[#3a3a3c] text-white text-[10px] font-bold px-4 py-1.5 rounded-full shadow-sm">削除</button>
+                                </div>
+                            </div>
 
-                    <div class="history-cat-section section-height">
-                        <div class="flex justify-between items-center mb-3 px-1">
-                            <h3 class="history-label-sub label-height">縦切込</h3>
-                            <button type="button" onclick="openConfirm('category', '縦')" class="bg-[#3a3a3c] text-white text-[10px] font-bold px-4 py-1.5 rounded-full shadow-sm">削除</button>
+                            <div class="history-cat-section section-height">
+                                <div id="heightHistoryList" class="space-y-2"></div>
+                            </div>
                         </div>
-                        <div id="heightHistoryList" class="space-y-2"></div>
                     </div>
                 </div>
             </div>
@@ -278,6 +425,10 @@
         let currentMode = 'side';
         let focusedInputId = 'side_l1';
         let isOverwriteMode = true;
+        let focusedSideInputId = 'side_l1';
+        let focusedHeightInputId = 'h_l1';
+        let isOverwriteModeSide = true;
+        let isOverwriteModeHeight = true;
         let calcDirection = 'LtoR';
         let historyData = [];
         let currentResult = null;
@@ -305,6 +456,8 @@
             if (savedHistory) historyData = JSON.parse(savedHistory);
             
             updateDisplay();
+            focusedSideInputId = focusedSideInputId || 'side_l1';
+            focusedHeightInputId = focusedHeightInputId || 'h_l1';
             switchTab(currentMode);
             calculate();
             renderHistory();
@@ -314,61 +467,103 @@
             currentMode = mode;
             const body = document.getElementById('mainBody');
             body.classList.remove('mode-height', 'mode-history');
-            if (mode === 'height') body.classList.add('mode-height');
-            else if (mode === 'history') body.classList.add('mode-history');
+            if (mode === 'history') body.classList.add('mode-history');
 
             document.getElementById('viewCalc').classList.toggle('hidden', mode === 'history');
             document.getElementById('viewHistory').classList.toggle('hidden', mode !== 'history');
-            document.getElementById('tabSide').classList.toggle('active', mode === 'side');
-            document.getElementById('tabHeight').classList.toggle('active', mode === 'height');
+            document.getElementById('tabSide').classList.toggle('active', mode !== 'history');
+            document.getElementById('tabHeight').classList.toggle('active', false);
             document.getElementById('tabHistory').classList.toggle('active', mode === 'history');
 
             if (mode !== 'history') {
-                document.getElementById('sideInputs').classList.toggle('hidden', mode !== 'side');
-                document.getElementById('heightInputs').classList.toggle('hidden', mode !== 'height');
-                document.getElementById('directionToggle').classList.toggle('hidden', mode !== 'side');
-                focusInput(mode === 'side' ? 'side_l1' : 'h_l1');
-                calculate();
+                refreshFocusedHighlights();
+                calculateSide();
+                calculateHeight();
             } else {
-                if (historyData.length > 0) previewHistoryItem(historyData[0].id, false);
+                renderHistory();
+                const firstSide = historyData.find(d => d.mode === '横');
+                const firstHeight = historyData.find(d => d.mode === '縦');
+                if (firstSide) previewHistoryItem(firstSide.id, false);
+                if (firstHeight) previewHistoryItem(firstHeight.id, false);
             }
             persist();
+        }
+
+
+        function refreshFocusedHighlights() {
+            document.querySelectorAll('.calc-cell').forEach(el => el.classList.remove('focused'));
+            const sideEl = document.getElementById('display-' + focusedSideInputId);
+            const heightEl = document.getElementById('display-' + focusedHeightInputId);
+            if (sideEl) sideEl.parentElement.classList.add('focused');
+            if (heightEl) heightEl.parentElement.classList.add('focused');
         }
 
         function focusInput(id) {
             document.querySelectorAll('.calc-cell').forEach(el => el.classList.remove('focused'));
             const target = document.getElementById('display-' + id);
             if (target) target.parentElement.classList.add('focused');
+
             focusedInputId = id;
+            if (id.startsWith('side_')) {
+                focusedSideInputId = id;
+                isOverwriteModeSide = true;
+            } else if (id.startsWith('h_')) {
+                focusedHeightInputId = id;
+                isOverwriteModeHeight = true;
+            }
             isOverwriteMode = true;
+            refreshFocusedHighlights();
         }
 
-        function pressKey(key) {
+        function applyKeyToTarget(key, targetId, overwriteStateName, scope) {
             if (key === 'allClear') {
-                inputs.side_a = ''; inputs.side_l2 = ''; inputs.side_l1 = ''; inputs.side_no = '1';
-                inputs.h_total = ''; inputs.h_l2 = ''; inputs.h_l1 = ''; inputs.h_no = '1';
-                isOverwriteMode = true;
-                showToast("全項目をリセットしました");
+                if (scope === 'side') {
+                    inputs.side_a = ''; inputs.side_l2 = ''; inputs.side_l1 = ''; inputs.side_no = '1';
+                    isOverwriteModeSide = true;
+                } else {
+                    inputs.h_total = ''; inputs.h_l2 = ''; inputs.h_l1 = ''; inputs.h_no = '1';
+                    isOverwriteModeHeight = true;
+                }
+                showToast("この列をリセットしました");
             } else if (key === 'clear') {
-                inputs[focusedInputId] = (focusedInputId.endsWith('_no')) ? '1' : '';
-                isOverwriteMode = true;
-            } else if (key === 'backspace') {
-                inputs[focusedInputId] = inputs[focusedInputId].toString().slice(0, -1);
-                isOverwriteMode = false;
+                inputs[targetId] = (targetId.endsWith('_no')) ? '1' : '';
+                if (scope === 'side') isOverwriteModeSide = true;
+                else isOverwriteModeHeight = true;
             } else if (key === 'enter') {
+                if (scope === 'side') {
+                    calculateSide();
+                } else {
+                    calculateHeight();
+                }
                 saveToHistory();
                 return;
             } else {
-                if (isOverwriteMode) {
-                    inputs[focusedInputId] = key;
-                    isOverwriteMode = false;
+                const overwrite = scope === 'side' ? isOverwriteModeSide : isOverwriteModeHeight;
+                if (overwrite) {
+                    inputs[targetId] = key;
+                    if (scope === 'side') isOverwriteModeSide = false;
+                    else isOverwriteModeHeight = false;
                 } else {
-                    inputs[focusedInputId] = inputs[focusedInputId].toString() + key;
+                    inputs[targetId] = inputs[targetId].toString() + key;
                 }
             }
             updateDisplay();
             calculate();
             persist();
+        }
+
+        function pressSideKey(key) {
+            applyKeyToTarget(key, focusedSideInputId, 'isOverwriteModeSide', 'side');
+        }
+
+        function pressHeightKey(key) {
+            applyKeyToTarget(key, focusedHeightInputId, 'isOverwriteModeHeight', 'height');
+        }
+
+        function pressKey(key) {
+            const scope = focusedInputId.startsWith('h_') ? 'height' : 'side';
+            if (scope === 'side') pressSideKey(key);
+            else pressHeightKey(key);
         }
 
         function updateDisplay() {
@@ -390,14 +585,15 @@
         }
 
         function calculate() {
-            if (currentMode === 'side') calculateSide();
-            else if (currentMode === 'height') calculateHeight();
+            if (currentMode === 'history') return;
+            calculateSide();
+            calculateHeight();
         }
 
         function calculateSide() {
             const a = parseFloat(inputs.side_a), l2 = parseFloat(inputs.side_l2), l1 = parseFloat(inputs.side_l1);
             const resArea = document.getElementById('resultArea');
-            if (isNaN(l1) || isNaN(l2) || isNaN(a) || a <= 0) { resArea.classList.add('hidden'); currentResult = null; return; }
+            if (isNaN(l1) || isNaN(l2) || isNaN(a) || a <= 0) { resArea.classList.add('hidden'); return; }
             let z, y;
             if (calcDirection === 'LtoR') { y = l1 % a; z = (a - ((l1 + l2) % a)) % a; }
             else { z = l1 % a; y = (a - ((l1 + l2) % a)) % a; }
@@ -412,14 +608,14 @@
 
         function calculateHeight() {
             const t = parseFloat(inputs.h_total), l2 = parseFloat(inputs.h_l2), l1 = parseFloat(inputs.h_l1);
-            const resArea = document.getElementById('resultArea');
-            if (isNaN(t) || isNaN(l1) || isNaN(l2) || t <= 0) { resArea.classList.add('hidden'); currentResult = null; return; }
+            const resArea = document.getElementById('heightResultArea');
+            if (isNaN(t) || isNaN(l1) || isNaN(l2) || t <= 0) { resArea.classList.add('hidden'); return; }
             const rD = l1, rU = l1 + l2, rT = t - rU;
             currentResult = { mode: '縦', no: inputs.h_no || '-', inputs: { total: t, l2, l1 }, outputs: { down: rD, up: rU, top: rT } };
             
-            document.getElementById('numericResults').className = "grid grid-cols-1 sm:grid-cols-3 gap-3";
-            document.getElementById('numericResults').innerHTML = `<div class="bg-[#1c1c1e] rounded-2xl py-2 border border-[#2c2c2e] text-center shadow-lg"><p class="text-[13px] font-medium text-[#d1d1d6] mb-1">下 切込</p><p class="text-[28px] font-semibold text-white leading-none">${formatNumber(rD)}<span class="text-sm ml-1 text-[#d1d1d6]">mm</span></p></div><div class="bg-[#1c1c1e] rounded-2xl py-2 border border-[#2c2c2e] text-center shadow-lg"><p class="text-[13px] font-medium text-[#d1d1d6] mb-1">上 切込</p><p class="text-[28px] font-semibold text-[#5e5ce6] leading-none">${formatNumber(rU)}<span class="text-sm ml-1 text-[#d1d1d6]">mm</span></p></div><div class="bg-[#1c1c1e] rounded-2xl py-2 border border-[#2c2c2e] text-center shadow-lg"><p class="text-[13px] font-medium text-[#d1d1d6] mb-1">上寸法</p><p class="text-[28px] font-semibold text-[#30d158] leading-none">${formatNumber(Math.round(rT*10)/10)}<span class="text-sm ml-1 text-[#d1d1d6]">mm</span></p></div>`;
-            updateSVG('height', t, l2, l1, rU, Math.round(rT*10)/10, null, 'svgContainer');
+            document.getElementById('heightNumericResults').className = "grid grid-cols-1 sm:grid-cols-3 gap-3";
+            document.getElementById('heightNumericResults').innerHTML = `<div class="bg-[#1c1c1e] rounded-2xl py-2 border border-[#2c2c2e] text-center shadow-lg"><p class="text-[13px] font-medium text-[#d1d1d6] mb-1">下 切込</p><p class="text-[28px] font-semibold text-white leading-none">${formatNumber(rD)}<span class="text-sm ml-1 text-[#d1d1d6]">mm</span></p></div><div class="bg-[#1c1c1e] rounded-2xl py-2 border border-[#2c2c2e] text-center shadow-lg"><p class="text-[13px] font-medium text-[#d1d1d6] mb-1">上 切込</p><p class="text-[28px] font-semibold text-[#5e5ce6] leading-none">${formatNumber(rU)}<span class="text-sm ml-1 text-[#d1d1d6]">mm</span></p></div><div class="bg-[#1c1c1e] rounded-2xl py-2 border border-[#2c2c2e] text-center shadow-lg"><p class="text-[13px] font-medium text-[#d1d1d6] mb-1">上寸法</p><p class="text-[28px] font-semibold text-[#30d158] leading-none">${formatNumber(Math.round(rT*10)/10)}<span class="text-sm ml-1 text-[#d1d1d6]">mm</span></p></div>`;
+            updateSVG('height', t, l2, l1, rU, Math.round(rT*10)/10, null, 'heightSvgContainer');
             resArea.classList.remove('hidden');
         }
 
@@ -456,7 +652,8 @@
         function deleteHistoryItem(id) {
             historyData = historyData.filter(d => d.id !== id);
             if (activePreviewId === id) {
-                document.getElementById('historyPreviewContainer').classList.add('hidden');
+                document.getElementById('sideHistoryPreviewContainer').classList.add('hidden');
+                document.getElementById('heightHistoryPreviewContainer').classList.add('hidden');
                 activePreviewId = null;
             }
             persist();
@@ -468,13 +665,14 @@
             const item = historyData.find(d => d.id === id);
             if (!item) return;
             activePreviewId = id;
-            document.getElementById('historyPreviewContainer').classList.remove('hidden');
             if (item.mode === '横') {
-                updateSVG('side', item.inputs.l1, item.inputs.l2, item.inputs.a, item.outputs.z, item.outputs.y, item.calcDir, 'historyPreviewSvg');
+                document.getElementById('sideHistoryPreviewContainer').classList.remove('hidden');
+                updateSVG('side', item.inputs.l1, item.inputs.l2, item.inputs.a, item.outputs.z, item.outputs.y, item.calcDir, 'sideHistoryPreviewSvg');
                 Object.assign(inputs, { side_a: item.inputs.a.toString(), side_l2: item.inputs.l2.toString(), side_l1: item.inputs.l1.toString(), side_no: item.no.toString() });
                 calcDirection = item.calcDir;
             } else {
-                updateSVG('height', item.inputs.total, item.inputs.l2, item.inputs.l1, item.outputs.up, Math.round(item.outputs.top*10)/10, null, 'historyPreviewSvg');
+                document.getElementById('heightHistoryPreviewContainer').classList.remove('hidden');
+                updateSVG('height', item.inputs.total, item.inputs.l2, item.inputs.l1, item.outputs.up, Math.round(item.outputs.top*10)/10, null, 'heightHistoryPreviewSvg');
                 Object.assign(inputs, { h_total: item.inputs.total.toString(), h_l2: item.inputs.l2.toString(), h_l1: item.inputs.l1.toString(), h_no: item.no.toString() });
             }
             updateDisplay();
@@ -669,7 +867,46 @@
             }
         }, { passive: true });
 
-        window.onload = hydrate;
+        window.onload = () => { hydrate(); refreshFocusedHighlights(); };
     </script>
+
+<button id="installBtn" style="position:fixed;right:16px;bottom:20px;z-index:9999;background:#2563eb;color:#fff;border:none;border-radius:14px;padding:12px 16px;font-weight:700;box-shadow:0 10px 24px rgba(0,0,0,.45);display:none;">アプリをインストール</button>
+<div id="iosInstallTip" style="position:fixed;left:16px;right:16px;bottom:20px;z-index:9999;background:rgba(28,28,30,.96);color:#fff;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px 16px;display:none;line-height:1.45;">
+  <div>iPhone / iPad はSafariの共有から「ホーム画面に追加」を使ってください。</div>
+  <button type="button" id="closeIosTip" style="margin-top:10px;background:#2c2c2e;color:#fff;border:none;padding:8px 12px;border-radius:10px;">閉じる</button>
+</div>
+<script>
+(() => {
+  const installBtn = document.getElementById('installBtn');
+  const iosTip = document.getElementById('iosInstallTip');
+  const closeIosTip = document.getElementById('closeIosTip');
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isIOS = /iPhone|iPad|iPod/i.test(window.navigator.userAgent || '');
+  let deferredPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (!isStandalone && installBtn) installBtn.style.display = 'block';
+  });
+
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        try { await deferredPrompt.userChoice; } catch(e) {}
+        deferredPrompt = null;
+        installBtn.style.display = 'none';
+        return;
+      }
+      if (isIOS && !isStandalone && iosTip) iosTip.style.display = 'block';
+    });
+  }
+  if (closeIosTip) closeIosTip.addEventListener('click', () => iosTip.style.display = 'none');
+  if (isIOS && !isStandalone && installBtn) installBtn.style.display = 'block';
+})();
+</script>
+
+
 </body>
 </html>
